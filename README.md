@@ -29,7 +29,7 @@ After that, CineSteward keeps itself up to date: when a new version is out, it o
 - **Details:** trailers, cast and crew, where it streams, franchises, ratings in half stars, tags and your own review.
 - **Profile:** your top 4 favourites, your stats and badges, charts, a watch calendar with streaks, your year in review, and pictures to share.
 - **Friends:** add friends with a friend code and see what they're watching, react, recommend titles, compare your tastes, comment, and watch shows together with episodes ticked off for both of you. A spoiler shield hides what friends say about episodes you haven't seen yet.
-- **Bring your history:** import what you watched and when, your ratings, reviews and watchlist from Letterboxd, IMDb, Trakt, TV Time or Netflix.
+- **Bring your history:** import what you watched and when, your ratings, reviews and watchlist from Letterboxd, IMDb, Trakt, TV Time, Netflix or Showcase.
 - **Backups:** save one yourself, or let CineSteward save a dated backup every day, week or month in a folder you choose, such as one OneDrive or Google Drive keeps in step.
 - **Your way:** light and dark themes, accent colours, larger text and higher contrast.
 
