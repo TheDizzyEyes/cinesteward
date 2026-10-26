@@ -20,7 +20,9 @@ permissions:
 jobs:
   mac:
     name: Mac disk images
-    runs-on: macos-15
+    # An Intel Mac makes both disk images as well as an Apple silicon one does, and GitHub has had too few of the
+    # latter: twice in a row the job waited 15 minutes for one and was cancelled (1.41.0).
+    runs-on: macos-15-intel
     env:
       VERSION: ${{ inputs.version }}
       REPOSITORY: ${{ github.repository }}
