@@ -65,6 +65,14 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$VERSION" =~ ^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$ ]] || { echo "Not a version: $VERSION"; exit 1; }
+          # One already on the release stays as it is: once the release is announced, Update now checks it against
+          # the SHA-256 announced, and one made again is never the same byte for byte (run again for the Macs, say).
+          on_release=$(gh release view "v$VERSION" --repo "$REPOSITORY" --json assets --jq '.assets[].name')
+          missing=""
+          for arch in x64 arm64; do
+            grep -qx "CineSteward-linux-$arch.AppImage" <<<"$on_release" || missing="$missing CineSteward-linux-$arch.AppImage"
+          done
+          [ -n "$missing" ] || { echo "Both AppImages are on the release already."; exit 0; }
           sudo apt-get update -qq
           sudo apt-get install -y -qq squashfs-tools
           gh release download "v$VERSION" --repo "$REPOSITORY" --pattern 'CineSteward-linux-*.tar.gz' --pattern install.sh --dir in
@@ -107,4 +115,4 @@ jobs:
           # The x64 one unpacks itself here, to be sure it's put together right.
           ./CineSteward-linux-x64.AppImage --appimage-extract >/dev/null
           [ -x squashfs-root/usr/bin/CineSteward ] || { echo "The AppImage doesn't unpack."; exit 1; }
-          gh release upload "v$VERSION" CineSteward-linux-x64.AppImage CineSteward-linux-arm64.AppImage --repo "$REPOSITORY" --clobber
+          gh release upload "v$VERSION" $missing --repo "$REPOSITORY"
