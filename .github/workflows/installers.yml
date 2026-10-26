@@ -1,0 +1,108 @@
+# Makes the double-click installers for a release that's on GitHub: a .dmg for each kind of Mac and an AppImage for
+# each kind of Linux computer, from the packages deploy/release-app.ps1 uploaded, and adds them to the release.
+# release-app.ps1 starts it and waits for it before announcing the release, so the announcement has the AppImages'
+# SHA-256s for Update now. Made on GitHub's own Macs and Linux computers, as a .dmg can only really be made on a Mac.
+#
+# Its source is deploy/github/installers.yml in the CineSteward repository; the releases repository has it as
+# .github/workflows/installers.yml (see deploy/RELEASES.md).
+name: Installers
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The release to make them for, like 1.40.0
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    name: Mac disk images
+    runs-on: macos-15
+    env:
+      VERSION: ${{ inputs.version }}
+      REPOSITORY: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Make CineSteward-mac-arm64.dmg and CineSteward-mac-x64.dmg
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$ ]] || { echo "Not a version: $VERSION"; exit 1; }
+          gh release download "v$VERSION" --repo "$REPOSITORY" --pattern 'CineSteward-mac-*.zip' --pattern install.sh --dir in
+          for arch in arm64 x64; do
+            zip="in/CineSteward-mac-$arch.zip"
+            # Only the package install.sh (which went out with it) knows.
+            expected=$(sed -n "s/^sha_mac_$arch='\([0-9A-Fa-f]*\)'\$/\1/p" in/install.sh | tr 'A-F' 'a-f')
+            [ -n "$expected" ] && [ "$(shasum -a 256 "$zip" | cut -d' ' -f1)" = "$expected" ] ||
+              { echo "$zip isn't the package install.sh knows."; exit 1; }
+            # The app, and a shortcut to Applications to drag it onto.
+            rm -rf stage && mkdir stage
+            ditto -x -k "$zip" stage
+            [ -x stage/CineSteward.app/Contents/MacOS/CineSteward ] || { echo "$zip has no CineSteward.app."; exit 1; }
+            ln -s /Applications stage/Applications
+            # hdiutil sometimes finds the disk busy on GitHub's Macs; it's tried again.
+            for try in 1 2 3; do
+              hdiutil create -volname CineSteward -srcfolder stage -fs HFS+ -format UDZO -ov "CineSteward-mac-$arch.dmg" && break
+              [ "$try" = 3 ] && exit 1
+              sleep 10
+            done
+          done
+          gh release upload "v$VERSION" CineSteward-mac-arm64.dmg CineSteward-mac-x64.dmg --repo "$REPOSITORY" --clobber
+
+  linux:
+    name: Linux AppImages
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ inputs.version }}
+      REPOSITORY: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Make CineSteward-linux-x64.AppImage and CineSteward-linux-arm64.AppImage
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$ ]] || { echo "Not a version: $VERSION"; exit 1; }
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq squashfs-tools
+          gh release download "v$VERSION" --repo "$REPOSITORY" --pattern 'CineSteward-linux-*.tar.gz' --pattern install.sh --dir in
+          # An AppImage is AppImage's runtime (which mounts the rest and starts it, without needing anything installed)
+          # followed by the app's folder packed as squashfs. The runtime is a fixed release, checked.
+          for kind in "x64 x86_64 2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d" \
+                      "arm64 aarch64 00cbdfcf917cc6c0ff6d3347d59e0ca1f7f45a6df1a428a0d6d8a78664d87444"; do
+            set -- $kind
+            arch=$1 machine=$2 runtime_sha=$3
+            curl -fsSL --proto '=https' --retry 3 -o "runtime-$machine" \
+              "https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-$machine"
+            echo "$runtime_sha  runtime-$machine" | sha256sum -c -
+            tarball="in/CineSteward-linux-$arch.tar.gz"
+            expected=$(sed -n "s/^sha_linux_$arch='\([0-9A-Fa-f]*\)'\$/\1/p" in/install.sh | tr 'A-F' 'a-f')
+            [ -n "$expected" ] && [ "$(sha256sum "$tarball" | cut -d' ' -f1)" = "$expected" ] ||
+              { echo "$tarball isn't the package install.sh knows."; exit 1; }
+            rm -rf AppDir && mkdir -p AppDir/usr/bin
+            tar -xzf "$tarball" -C AppDir/usr/bin --strip-components=1
+            [ -x AppDir/usr/bin/CineSteward ] || { echo "$tarball has no CineSteward program."; exit 1; }
+            ln -s usr/bin/CineSteward AppDir/AppRun
+            cp AppDir/usr/bin/cinesteward.png AppDir/cinesteward.png
+            ln -s cinesteward.png AppDir/.DirIcon
+            cat > AppDir/cinesteward.desktop <<EOF
+          [Desktop Entry]
+          Type=Application
+          Name=CineSteward
+          Comment=Keep track of the movies and series you watch
+          Exec=CineSteward %u
+          Icon=cinesteward
+          Terminal=false
+          Categories=AudioVideo;Video;
+          MimeType=x-scheme-handler/cinesteward;
+          StartupWMClass=CineSteward
+          X-AppImage-Version=$VERSION
+          EOF
+            mksquashfs AppDir "CineSteward-$arch.squashfs" -root-owned -noappend -comp gzip -quiet
+            cat "runtime-$machine" "CineSteward-$arch.squashfs" > "CineSteward-linux-$arch.AppImage"
+            chmod 755 "CineSteward-linux-$arch.AppImage"
+          done
+          # The x64 one unpacks itself here, to be sure it's put together right.
+          ./CineSteward-linux-x64.AppImage --appimage-extract >/dev/null
+          [ -x squashfs-root/usr/bin/CineSteward ] || { echo "The AppImage doesn't unpack."; exit 1; }
+          gh release upload "v$VERSION" CineSteward-linux-x64.AppImage CineSteward-linux-arm64.AppImage --repo "$REPOSITORY" --clobber
