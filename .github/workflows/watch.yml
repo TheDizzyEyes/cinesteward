@@ -1,0 +1,41 @@
+# A watch on the CineSteward server from outside (since 1.50.0): every 15 minutes GitHub asks it whether it's up. When
+# it doesn't answer three times in a row, an issue "The server isn't answering" is opened in this repository, which
+# GitHub tells you about (by email, or in its app); once it answers again, the issue is closed with the time. The
+# app tells the team too while it runs (Services/ServerWatcher.cs), but this one also works with every PC off.
+# The releases repository has it as .github/workflows/watch.yml (deploy/RELEASES.md). The server is the repository
+# variable SERVER, or https://cinesteward.com.
+name: Watch the server
+
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ask the server
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SERVER: ${{ vars.SERVER || 'https://cinesteward.com' }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          up=no
+          for try in 1 2 3; do
+            if curl -fsS -m 20 -o /dev/null "$SERVER/health"; then up=yes; break; fi
+            sleep 30
+          done
+          open=$(gh issue list --repo "$REPOSITORY" --label server-down --state open --json number --jq '.[0].number // empty')
+          now=$(date -u '+%Y-%m-%d %H:%M')
+          if [ "$up" = no ] && [ -z "$open" ]; then
+            gh label create server-down --repo "$REPOSITORY" --color B60205 --description "The CineSteward server isn't answering" 2>/dev/null || true
+            gh issue create --repo "$REPOSITORY" --label server-down --title "The server isn't answering" \
+              --body "$SERVER/health didn't answer at $now UTC, three times in a minute. This closes by itself once it answers again."
+          elif [ "$up" = yes ] && [ -n "$open" ]; then
+            gh issue close "$open" --repo "$REPOSITORY" --comment "Answering again at $now UTC."
+          fi
