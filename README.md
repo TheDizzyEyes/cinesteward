@@ -8,11 +8,11 @@ CineSteward keeps track of the shows and movies you watch, on Windows, macOS and
 
 ## Install
 
-Pick the download for your computer. Each one is the latest version, and CineSteward keeps itself up to date after that.
+On Windows, get CineSteward from the Microsoft Store. For a Mac, Linux or a Steam Deck, pick the download for your computer. Each one is the latest version, and CineSteward keeps itself up to date after that.
 
 | Your computer | Download | Needs |
 | --- | --- | --- |
-| 🪟 **Windows** | [CineSteward-Setup.exe](https://github.com/TheDizzyEyes/cinesteward/releases/latest/download/CineSteward-Setup.exe) | 64-bit Windows 10 or 11 |
+| 🪟 **Windows** | [Microsoft Store](https://apps.microsoft.com/detail/9P5SNK44Z7VD), or [CineSteward-Setup.exe](https://github.com/TheDizzyEyes/cinesteward/releases/latest/download/CineSteward-Setup.exe) | 64-bit Windows 10 (version 1809 or later) or 11 |
 | 🍎 **Mac with Apple silicon** (M1 and later) | [CineSteward-mac-arm64.dmg](https://github.com/TheDizzyEyes/cinesteward/releases/latest/download/CineSteward-mac-arm64.dmg) | macOS 15 Sequoia or later |
 | 🍎 **Mac with an Intel processor** | [CineSteward-mac-x64.dmg](https://github.com/TheDizzyEyes/cinesteward/releases/latest/download/CineSteward-mac-x64.dmg) | macOS 15 Sequoia or later |
 | 🐧 **Linux** on Intel or AMD | [CineSteward-linux-x64.AppImage](https://github.com/TheDizzyEyes/cinesteward/releases/latest/download/CineSteward-linux-x64.AppImage) | 64-bit, with a desktop such as GNOME, KDE Plasma, Cinnamon or Xfce |
@@ -23,9 +23,13 @@ You don't need administrator rights, and nothing else has to be installed first.
 
 ### 🪟 Windows
 
+**From the Microsoft Store:** open [CineSteward in the Microsoft Store](https://apps.microsoft.com/detail/9P5SNK44Z7VD) and click **Get** (or **Install**). The Store signs it, so Windows trusts it straight away, and the Store keeps it up to date. To remove it, right-click CineSteward in the Start menu and choose **Uninstall**.
+
+**Or with the installer from GitHub:**
+
 1. Download [CineSteward-Setup.exe](https://github.com/TheDizzyEyes/cinesteward/releases/latest/download/CineSteward-Setup.exe) and double-click it.
 2. Choose where CineSteward goes (or keep `Documents\CineSteward`) and click **Install**.
-3. CineSteward isn't code-signed yet, so Windows may first say **Windows protected your PC**. Choose **More info**, then **Run anyway**.
+3. This installer isn't code-signed yet, so Windows may first say **Windows protected your PC**. Choose **More info**, then **Run anyway**.
 
 Or install it with one line in PowerShell, which skips that warning:
 
@@ -33,7 +37,9 @@ Or install it with one line in PowerShell, which skips that warning:
 irm https://github.com/TheDizzyEyes/cinesteward/releases/latest/download/install.ps1 | iex
 ```
 
-To remove it, go to **Settings → Apps → Installed apps** in Windows. Your library stays on your PC unless you choose to delete it too.
+To remove a copy from the installer, go to **Settings → Apps → Installed apps** in Windows. Your library stays on your PC unless you choose to delete it too.
+
+Already using the installer's copy? The Store's copy brings your library along the first time it starts. After that each keeps its own, and with an account both stay the same through the CineSteward server.
 
 ### 🍎 macOS
 
